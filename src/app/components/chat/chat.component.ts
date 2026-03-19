@@ -186,7 +186,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
   sidePanel = viewChild.required(SidePanelComponent);
   evalTab = viewChild(EvalTabComponent);
   bottomPanelRef = viewChild.required<ElementRef>('bottomPanel');
-  enableSseIndicator = signal(false);
+  enableSseIndicator = signal(true);
   isChatMode = signal(true);
   isEvalCaseEditing = signal(false);
   hasEvalCaseChanged = signal(false);
@@ -215,7 +215,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
   redirectUri = URLUtil.getBaseUrlWithoutPath();
   showSidePanel = true;
   showBuilderAssistant = true;
-  useSse = false;
+  useSse = true;
   currentSessionState: SessionState|undefined = {};
   root_agent = ROOT_AGENT;
   updatedSessionState: WritableSignal<any> = signal(null);
@@ -602,6 +602,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
     this.streamingTextMessage = null;
     this.agentService.runSse(req).subscribe({
       next: async (chunkJson: AdkEvent) => {
+        console.log('ChatComponent: Received SSE event chunk:', chunkJson);
         if (chunkJson.error) {
           this.openSnackBar(chunkJson.error, 'OK');
           return;
@@ -672,6 +673,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private processPart(chunkJson: any, part: any) {
+    console.log('ChatComponent: Processing part:', part);
     const renderedContent =
         chunkJson.groundingMetadata?.searchEntryPoint?.renderedContent;
 
@@ -1557,6 +1559,9 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadTraceData() {
+    if (!this.agentService.apiServerDomain || this.agentService.apiServerDomain.includes('127.0.0.1')) {
+      return;
+    }
     this.eventService.getTrace(this.sessionId)
         .pipe(first(), catchError(() => of([])))
         .subscribe(res => {

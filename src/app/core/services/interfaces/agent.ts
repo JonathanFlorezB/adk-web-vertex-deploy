@@ -26,6 +26,7 @@ export const AGENT_SERVICE = new InjectionToken<AgentService>('AgentService');
  * Service to provide methods to handle agent.
  */
 export abstract class AgentService {
+  apiServerDomain?: string;
   abstract getApp(): Observable<string>;
   abstract setApp(name: string): void;
   abstract getLoadingState(): BehaviorSubject<boolean>;

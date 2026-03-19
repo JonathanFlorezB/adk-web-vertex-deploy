@@ -37,3 +37,4 @@ adk-env/
 adk-samples/
 
 venv/
+src/assets/config/vertex-config.json

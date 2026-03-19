@@ -78,12 +78,15 @@ import {TraceService} from './app/core/services/trace.service';
 import {UiStateService} from './app/core/services/ui-state.service';
 import {VideoService} from './app/core/services/video.service';
 import {WebSocketService} from './app/core/services/websocket.service';
-import {LOGO_COMPONENT} from './app/injection_tokens';
+import {LOGO_COMPONENT, VERTEX_CONFIG} from './app/injection_tokens';
 
-fetch('./assets/config/runtime-config.json')
-    .then((response) => response.json())
-    .then((config) => {
+Promise.all([
+  fetch('./assets/config/runtime-config.json').then((response) => response.json()),
+  fetch('./assets/config/vertex-config.json').then((response) => response.json())
+])
+    .then(([config, vertexConfig]) => {
       (window as any)['runtimeConfig'] = config;
+      (window as any)['vertexConfig'] = vertexConfig;
 
       bootstrapApplication(AppComponent, {
         providers: [
@@ -127,7 +130,8 @@ fetch('./assets/config/runtime-config.json')
           provideMarkdown(),
           {provide: LOCATION_SERVICE, useClass: Location},
           {provide: UI_STATE_SERVICE, useClass: UiStateService},
-          {provide: THEME_SERVICE, useClass: ThemeService}
+          {provide: THEME_SERVICE, useClass: ThemeService},
+          {provide: VERTEX_CONFIG, useValue: vertexConfig}
         ]
       }).catch((err) => console.error(err));
     });

@@ -15,17 +15,14 @@
  * limitations under the License.
  */
 
-import type {FunctionResponse} from './types';
+import type {FunctionResponse, Part} from './types';
 
 export declare interface AgentRunRequest {
   appName: string;
   userId: string;
   sessionId: string | undefined;
   newMessage: {
-    parts: Array<{
-      text?: string,
-      functionResponse?: FunctionResponse,
-    }>,
+    parts: Part[],
     role: string,
   };
   functionCallEventId?: string;

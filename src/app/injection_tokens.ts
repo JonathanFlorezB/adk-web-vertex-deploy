@@ -25,3 +25,7 @@ import {Component, InjectionToken, Type} from '@angular/core';
 export const LOGO_COMPONENT = new InjectionToken<Type<Component>>(
     'LOGO_COMPONENT',
 );
+/**
+ * Represents the configuration for Vertex AI.
+ */
+export const VERTEX_CONFIG = new InjectionToken<any>('VERTEX_CONFIG');

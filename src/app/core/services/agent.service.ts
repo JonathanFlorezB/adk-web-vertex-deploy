@@ -22,12 +22,19 @@ import {URLUtil} from '../../../utils/url-util';
 import {AgentRunRequest} from '../models/AgentRunRequest';
 import {LlmResponse} from '../models/types';
 import {AgentService as AgentServiceInterface} from './interfaces/agent';
+import {VertexAuthService, VertexConfig} from './vertex-auth.service';
+import {VERTEX_CONFIG} from '../../injection_tokens';
+import {Inject} from '@angular/core';
+import {switchMap} from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AgentService implements AgentServiceInterface {
   apiServerDomain = URLUtil.getApiServerBaseUrl();
+  private get baseUrl() {
+    return `https://${this.config.location}-aiplatform.googleapis.com/v1beta1/projects/${this.config.project}/locations/${this.config.location}/reasoningEngines/${this.config.reasoningEngineId}`;
+  }
   private _currentApp = new BehaviorSubject<string>('');
   currentApp = this._currentApp.asObservable();
   private isLoading = new BehaviorSubject<boolean>(false);
@@ -35,6 +42,8 @@ export class AgentService implements AgentServiceInterface {
   constructor(
     private http: HttpClient,
     private zone: NgZone,
+    private authService: VertexAuthService,
+    @Inject(VERTEX_CONFIG) private config: VertexConfig
   ) {}
 
   getApp(): Observable<string> {
@@ -50,70 +59,145 @@ export class AgentService implements AgentServiceInterface {
   }
 
   runSse(req: AgentRunRequest): Observable<LlmResponse> {
-    const url = this.apiServerDomain + `/run_sse`;
     this.isLoading.next(true);
-    return new Observable<LlmResponse>((observer) => {
-      const self = this;
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify(req),
-      })
-        .then((response) => {
-          const reader = response.body?.getReader();
-          const decoder = new TextDecoder('utf-8');
-          let lastData = '';
-
-          const read = () => {
-            reader?.read()
-                .then(({done, value}) => {
-                  this.isLoading.next(true);
-                  if (done) {
-                    this.isLoading.next(false);
-                    return observer.complete();
+    return this.authService.getAccessToken().pipe(
+      switchMap(token => new Observable<LlmResponse>((observer) => {
+        const url = `${this.baseUrl}:streamQuery?alt=sse`;
+        const body = {
+          class_method: 'async_stream_query',
+          input: {
+            user_id: req.userId,
+            session_id: req.sessionId,
+            message: req.newMessage.parts[0].text || {
+              role: req.newMessage.role,
+              content: {
+                parts: req.newMessage.parts.map(p => {
+                  const part: any = { ...p };
+                  if (p.functionCall) {
+                    part.function_call = p.functionCall;
+                    delete part.functionCall;
                   }
-                  const chunk = decoder.decode(value, {stream: true});
-                  lastData += chunk;
-                  try {
-                    const lines = lastData.split(/\r?\n/).filter(
-                        (line) => line.startsWith('data:'));
-                    lines.forEach((line) => {
-                      const data = line.replace(/^data:\s*/, '');
-                      const llmResponse = JSON.parse(data) as LlmResponse;
-                      self.zone.run(() => observer.next(llmResponse));
-                    });
-                    lastData = '';
-                  } catch (e) {
-                    // the data is not a valid json, it could be an incomplete
-                    // chunk. we ignore it and wait for the next chunk.
-                    if (e instanceof SyntaxError) {
-                      read();
-                    }
+                  if (p.functionResponse) {
+                    part.function_response = p.functionResponse;
+                    delete p.functionResponse;
                   }
-                  read();  // Read the next chunk
+                  return part;
                 })
-                .catch((err) => {
-                  self.zone.run(() => observer.error(err));
-                });
-          };
+              }
+            }
+          }
+        };
 
-          read();
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify(body),
         })
-        .catch((err) => {
-          self.zone.run(() => observer.error(err));
-        });
-    });
+          .then((response) => {
+            console.log('Vertex AI fetch status:', response.status);
+            if (!response.ok) {
+              console.error('Vertex AI request failed:', response.statusText);
+              this.zone.run(() => observer.error(`HTTP error ${response.status}`));
+              return;
+            }
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let lastData = '';
+            const streamId = `stream-${Date.now()}`;
+
+            const read = () => {
+              reader?.read()
+                  .then(({done, value}) => {
+                    this.isLoading.next(true);
+                    if (done) {
+                      this.isLoading.next(false);
+                      return observer.complete();
+                    }
+                    lastData += decoder.decode(value, {stream: true});
+                    console.log('Receiving raw chunk:', lastData);
+                    let lines = lastData.split(/\r?\n/);
+                    lastData = lines.pop() || ''; // Keep the partial line for next chunk
+
+                    lines.forEach((line) => {
+                      line = line.trim();
+                      if (!line) return;
+
+                      let dataStr = line;
+                      if (line.startsWith('data:')) {
+                        dataStr = line.substring(5).trim();
+                      }
+
+                      if (dataStr && dataStr !== '[DONE]') {
+                        try {
+                          const parsed = JSON.parse(dataStr);
+                          const content = parsed.content || (parsed.output ? parsed.output.content : null);
+
+                          if (content) {
+                            const parts = (content.parts || []).map((part: any) => {
+                              const newPart: any = { ...part };
+                              if (part.function_call) {
+                                newPart.functionCall = part.function_call;
+                                delete newPart.function_call;
+                              }
+                              if (part.function_response) {
+                                newPart.functionResponse = part.function_response;
+                                delete newPart.function_response;
+                              }
+                              if (part.executable_code) {
+                                newPart.executableCode = part.executable_code;
+                                delete newPart.executable_code;
+                              }
+                              if (part.code_execution_result) {
+                                newPart.codeExecutionResult = part.code_execution_result;
+                                delete part.code_execution_result;
+                              }
+                              return newPart;
+                            });
+
+                            const event: any = {
+                              id: parsed.id || streamId,
+                              author: content.role === 'model' ? 'bot' : 'user',
+                              content: {
+                                role: content.role,
+                                parts: parts
+                              },
+                              partial: true
+                            };
+                            console.log('Emitting ADK Event to UI:', event);
+                            this.zone.run(() => observer.next(event));
+                          }
+                        } catch (e) {
+                          if (dataStr.startsWith('{')) {
+                            console.error('JSON parse error or invalid chunk:', dataStr, e);
+                          }
+                        }
+                      }
+                    });
+                    read();
+                  })
+                  .catch((err) => {
+                    this.zone.run(() => observer.error(err));
+                  });
+            };
+
+            read();
+          })
+          .catch((err) => {
+            this.zone.run(() => observer.error(err));
+          });
+      }))
+    );
   }
 
   listApps(): Observable<string[]> {
-    if (this.apiServerDomain != undefined) {
-      const url = this.apiServerDomain + `/list-apps?relative_path=./`;
-      return this.http.get<string[]>(url);
+    if (this.config && this.config.reasoningEngineId) {
+      return of([this.config.reasoningEngineId]);
     }
-    return new Observable<[]>();
+    return of([]);
   }
 
   agentBuild(req: any): Observable<boolean> {
@@ -134,52 +218,45 @@ export class AgentService implements AgentServiceInterface {
     return new Observable<false>();
   }
 
-  getAgentBuilder(agentName: string) {
+  getAgentBuilder(appName: string): Observable<string> {
     if (this.apiServerDomain != undefined) {
-      const url = 
-        this.apiServerDomain + `/builder/app/${agentName}?ts=${Date.now()}`
-      return this.http.get(url, {
-        responseType: 'text'
-      });
+      const url = this.apiServerDomain + `/builder/load?app_name=${appName}`;
+      return this.http.get<string>(url);
     }
-    return new Observable<"">();
+    return new Observable<''>();
   }
 
-  getAgentBuilderTmp(agentName: string) {
+  getAgentBuilderTmp(appName: string): Observable<string> {
     if (this.apiServerDomain != undefined) {
-      const url = 
-        this.apiServerDomain + `/builder/app/${agentName}?ts=${Date.now()}&tmp=true`
-      return this.http.get(url, {
-        responseType: 'text'
-      });
+      const url =
+        this.apiServerDomain + `/builder/load?app_name=${appName}&tmp=true`;
+      return this.http.get<string>(url);
     }
-    return new Observable<"">();
-  }
-
-  getSubAgentBuilder(appName: string, relativePath: string) {
-    if (this.apiServerDomain != undefined) {
-      let url = 
-        this.apiServerDomain + `/builder/app/${appName}?ts=${Date.now()}&file_path=${relativePath}&tmp=true`
-      return this.http.get(url, {
-        responseType: 'text'
-      });
-    }
-    return new Observable<"">();
+    return new Observable<''>();
   }
 
   agentChangeCancel(appName: string) {
     if (this.apiServerDomain != undefined) {
-      let url = 
-        this.apiServerDomain + `/builder/app/${appName}/cancel`
-      return this.http.post<any>(url, {});
+      const url =
+        this.apiServerDomain + `/builder/cancel?app_name=${appName}`;
+      return this.http.get<any>(url);
     }
-    return new Observable<false>();
+    return new Observable<undefined>();
   }
 
-  getAppInfo(appName: string) {
+  getAppInfo(appName: string): Observable<any> {
     if (this.apiServerDomain != undefined) {
-      let url = this.apiServerDomain + `/dev/build_graph/${appName}`
+      const url = this.apiServerDomain + `/apps/${appName}`;
       return this.http.get<any>(url);
+    }
+    return new Observable<any>();
+  }
+
+  getSubAgentBuilder(appName: string, relativePath: string): Observable<string> {
+    if (this.apiServerDomain != undefined) {
+      const url = this.apiServerDomain +
+          `/builder/load?app_name=${appName}&relative_path=${relativePath}`;
+      return this.http.get<string>(url);
     }
     return new Observable<''>();
   }
