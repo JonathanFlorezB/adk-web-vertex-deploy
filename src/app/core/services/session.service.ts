@@ -148,28 +148,39 @@ export class SessionService implements SessionServiceInterface {
         return this.http.get<any>(url, {
           headers: this.getHeaders(token)
         }).pipe(map(res => {
-          const vertexEvents = res.events || [];
-          const session: any = { id: sessionId, events: [] };
+          const vertexEvents = res.sessionEvents || res.events || [];
+          console.log('Session History Response:', res);
+          const session: any = { id: sessionId, events: [], state: {} };
 
           session.events = vertexEvents.map((ve: any) => {
-              const eventId = ve.name ? ve.name.split('/').pop() : `event_${Math.random()}`;
-              if (ve.call) {
-                return {
-                  id: eventId,
-                  author: 'user',
-                  content: {
-                    role: 'user',
-                    parts: [{ text: ve.call.input.message }]
+            if (!ve.content) return null;
+            const eventId = ve.name ? ve.name.split('/').pop() : `event_${Math.random()}`;
+            
+            return {
+              id: eventId,
+              author: ve.author === userId ? 'user' : 'bot',
+              content: {
+                role: ve.content.role,
+                parts: ve.content.parts ? ve.content.parts.map((p: any) => {
+                  const newPart: any = { ...p };
+                  if (p.functionCall) {
+                    newPart.functionCall = p.functionCall;
                   }
-                };
-              } else if (ve.response) {
-                return {
-                  id: eventId,
-                  author: 'bot',
-                  content: ve.response.content
-                };
+                  if (p.function_call) {
+                    newPart.functionCall = p.function_call;
+                    delete newPart.function_call;
+                  }
+                  if (p.functionResponse) {
+                    newPart.functionResponse = p.functionResponse;
+                  }
+                  if (p.function_response) {
+                    newPart.functionResponse = p.function_response;
+                    delete newPart.function_response;
+                  }
+                  return newPart;
+                }) : []
               }
-            return null;
+            };
           }).filter((e: any) => e !== null);
 
           return session as Session;

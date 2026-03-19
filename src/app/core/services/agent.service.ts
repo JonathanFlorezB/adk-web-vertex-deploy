@@ -160,7 +160,7 @@ export class AgentService implements AgentServiceInterface {
 
                             const event: any = {
                               id: parsed.id || streamId,
-                              author: content.role === 'model' ? 'bot' : 'user',
+                              author: parsed.author === req.userId ? 'user' : 'bot',
                               content: {
                                 role: content.role,
                                 parts: parts
