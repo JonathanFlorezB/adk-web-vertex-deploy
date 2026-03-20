@@ -448,7 +448,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       if (!sessionUrlEnabled || !sessionUrl) {
-        this.createSessionAndReset();
+        this.resetChatState();
 
         return;
       }
@@ -459,7 +459,7 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
                     this.openSnackBar(
                         'Cannot find specified session. Creating a new one.',
                         'OK');
-                    this.createSessionAndReset();
+                    this.resetChatState();
                     return of(null);
                   }))
             .subscribe((session) => {
@@ -503,8 +503,8 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
         });
   }
 
-  private createSessionAndReset() {
-    this.createSession();
+  private resetChatState() {
+    this.sessionId = '';
     this.eventData = new Map<string, any>();
     this.messages.set([]);
     this.artifacts = [];
@@ -1920,10 +1920,8 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onNewSessionClick() {
+    this.resetChatState();
     this.createSession();
-    this.eventData.clear();
-    this.messages.set([]);
-    this.artifacts = [];
     this.traceData = [];
     this.bottomPanelVisible = false;
 
