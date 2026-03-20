@@ -25,6 +25,7 @@ export interface VertexConfig {
   project: string;
   location: string;
   reasoningEngineId: string;
+  agentName?: string;
   serviceAccountKey: {
     type: string;
     project_id: string;

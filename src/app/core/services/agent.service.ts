@@ -194,10 +194,8 @@ export class AgentService implements AgentServiceInterface {
   }
 
   listApps(): Observable<string[]> {
-    if (this.config && this.config.reasoningEngineId) {
-      return of([this.config.reasoningEngineId]);
-    }
-    return of([]);
+    const name = this.config.agentName || this.config.reasoningEngineId;
+    return of(name ? [name] : []);
   }
 
   agentBuild(req: any): Observable<boolean> {

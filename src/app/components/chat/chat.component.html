@@ -154,12 +154,14 @@
             [matTooltip]="i18n.deleteSessionTooltip" (click)="deleteSession(sessionId)">
             delete
           </span>
-          } @if (isExportSessionEnabledObs | async) {
+          }
+          <!-- @if (isExportSessionEnabledObs | async) {
           <span class="material-symbols-outlined toolbar-icon" id="toolbar-export-session-button"
             [matTooltip]="i18n.exportSessionTooltip" (click)="exportSession()">
             download
           </span>
-          } @if (importSessionEnabledObs | async) {
+          } -->
+          @if (importSessionEnabledObs | async) {
           <span class="material-symbols-outlined toolbar-icon" id="toolbar-import-session-button"
             [matTooltip]="i18n.importSessionTooltip" (click)="importSession()">
             upload
@@ -220,12 +222,6 @@
       <div class="bottom-resize-handler"></div>
       <app-trace-event [userId]="userId" [appName]="appName" [sessionId]="sessionId"
         (panelClosed)="closeTraceEventDetailPanel()"></app-trace-event>
-    </div>
-    }
-    @if (isDeveloperUiDisclaimerEnabledObs | async) {
-    <div class="adk-web-developer-ui-disclaimer" [matTooltip]="i18n.disclosureTooltip" matTooltipPosition="left"
-      style="align-self: flex-end">
-      {{i18n.adkWebDeveloperUiMessage}}
     </div>
     }
   </div>
