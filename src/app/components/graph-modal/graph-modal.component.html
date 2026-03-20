@@ -1,0 +1,17 @@
+<div class="graph-modal-container">
+  <div class="modal-header">
+    <h2>Estructura de la Ontología</h2>
+    <div style="display: flex; gap: 8px;">
+      <button mat-stroked-button (click)="resetZoom()" style="display: flex; align-items: center; gap: 4px;">
+        <mat-icon>center_focus_strong</mat-icon>
+        Centrar Grafo
+      </button>
+      <button mat-icon-button (click)="close()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  <div class="graph-content">
+    <div id="graph-container" #graphContainer></div>
+  </div>
+</div>

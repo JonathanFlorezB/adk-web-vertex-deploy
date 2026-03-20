@@ -27,6 +27,7 @@ import {MatInput} from '@angular/material/input';
 import {MatPaginator, PageEvent} from '@angular/material/paginator';
 import {MatProgressSpinner} from '@angular/material/progress-spinner';
 import {MatSelect, MatSelectChange} from '@angular/material/select';
+import { MatDialog } from '@angular/material/dialog';
 import {MatTab, MatTabChangeEvent, MatTabGroup, MatTabLabel} from '@angular/material/tabs';
 import {MatTooltip} from '@angular/material/tooltip';
 import {type SafeHtml} from '@angular/platform-browser';
@@ -47,6 +48,8 @@ import {SessionTabComponent} from '../session-tab/session-tab.component';
 import {StateTabComponent} from '../state-tab/state-tab.component';
 import {ThemeToggle} from '../theme-toggle/theme-toggle';
 import {TraceTabComponent} from '../trace-tab/trace-tab.component';
+import { GraphModalComponent } from '../graph-modal/graph-modal.component';
+import { MatButton } from '@angular/material/button';
 
 import {SidePanelMessagesInjectionToken} from './side-panel.component.i18n';
 
@@ -83,6 +86,7 @@ import {SidePanelMessagesInjectionToken} from './side-panel.component.i18n';
     MatProgressSpinner,
     MatFormField,
     MatInput,
+    MatButton,
   ],
 })
 export class SidePanelComponent implements AfterViewInit {
@@ -139,6 +143,7 @@ export class SidePanelComponent implements AfterViewInit {
   readonly evalTabComponentClass = inject(EVAL_TAB_COMPONENT, {optional: true});
   private readonly environmentInjector = inject(EnvironmentInjector);
   protected readonly uiStateService = inject(UI_STATE_SERVICE);
+  private readonly dialog = inject(MatDialog);
 
   // Feature flag references for use in template.
   readonly isAlwaysOnSidePanelEnabledObs =
@@ -255,6 +260,16 @@ export class SidePanelComponent implements AfterViewInit {
               this.evalNotInstalled.emit(message);
             });
       }
+    });
+  }
+
+  openGraphModal() {
+    this.dialog.open(GraphModalComponent, {
+      width: '95vw',
+      height: '95vh',
+      maxWidth: '95vw',
+      panelClass: 'graph-modal-panel',
+      disableClose: true // Only close via the 'x' button as requested
     });
   }
 }
