@@ -740,11 +740,6 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
         this.insertMessageBeforeLoadingMessage(this.streamingTextMessage);
       }
     } else if (!part.thought) {
-      // Skip partial events for non-text parts to avoid duplicates
-      if (this.useSse && chunkJson.partial) {
-        return;
-      }
-
       // If the part is an A2A DataPart, display it as a message (e.g., A2UI or
       // Json)
       if (this.isA2aDataPart(part)) {
@@ -1148,7 +1143,10 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!message.functionCalls) {
         message.functionCalls = [];
       }
-      message.functionCalls.push(part.functionCall);
+      // Avoid duplicate function calls during streaming
+      if (!message.functionCalls.some((fc: any) => fc.id === part.functionCall.id)) {
+        message.functionCalls.push(part.functionCall);
+      }
       if (event?.id) {
         message.eventId = event.id;
       }
@@ -1156,7 +1154,10 @@ export class ChatComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!message.functionResponses) {
         message.functionResponses = [];
       }
-      message.functionResponses.push(part.functionResponse);
+      // Avoid duplicate function responses during streaming
+      if (!message.functionResponses.some((fr: any) => fr.id === part.functionResponse.id)) {
+        message.functionResponses.push(part.functionResponse);
+      }
       if (event?.id) {
         message.eventId = event.id;
       }

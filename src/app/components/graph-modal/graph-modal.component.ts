@@ -16,39 +16,28 @@ export class GraphModalComponent implements AfterViewInit, OnDestroy {
   private readonly graphContainer = viewChild<ElementRef>('graphContainer');
   private graphInstance: any;
 
-  private readonly graphData = [
-    {
-      "nodes": [
-        { "identity": -102, "labels": ["Clases_Documentales"], "properties": { "name": "Clases_Documentales" } },
-        { "identity": -107, "labels": ["Reglas_Documentales"], "properties": { "name": "Reglas_Documentales" } },
-        { "identity": -106, "labels": ["Nombres"], "properties": { "name": "Nombres" } },
-        { "identity": -108, "labels": ["Persona"], "properties": { "name": "Persona" } },
-        { "identity": -103, "labels": ["Tipo_documental"], "properties": { "name": "Tipo_documental" } },
-        { "identity": -104, "labels": ["Tipo_documento"], "properties": { "name": "Tipo_documento" } },
-        { "identity": -110, "labels": ["Documento"], "properties": { "name": "Documento" } },
-        { "identity": -105, "labels": ["Numero_Documento"], "properties": { "name": "Numero_Documento" } },
-        { "identity": -109, "labels": ["Proceso"], "properties": { "name": "Proceso" } }
-      ],
-      "relationships": [
-        { "start": -109, "end": -110, "type": "REQUIERE" },
-        { "start": -103, "end": -102, "type": "TIENE" },
-        { "start": -107, "end": -105, "type": "TIENE" },
-        { "start": -103, "end": -104, "type": "TIENE" },
-        { "start": -102, "end": -104, "type": "TIENE" },
-        { "start": -107, "end": -104, "type": "TIENE" },
-        { "start": -107, "end": -102, "type": "TIENE" },
-        { "start": -103, "end": -105, "type": "TIENE" },
-        { "start": -107, "end": -106, "type": "TIENE" },
-        { "start": -102, "end": -105, "type": "TIENE" },
-        { "start": -102, "end": -102, "type": "TIENE" },
-        { "start": -102, "end": -106, "type": "TIENE" },
-        { "start": -103, "end": -106, "type": "TIENE" },
-        { "start": -108, "end": -110, "type": "ENTREGO" },
-        { "start": -109, "end": -102, "type": "PERTENECE_A" },
-        { "start": -108, "end": -109, "type": "APLICA_A" }
-      ]
-    }
-  ];
+  private readonly graphData = {
+    "nodes": [
+      { "id": "ModeloDocumental", "group": 1, "level": "Raíz", "desc": "Configuración global del banco" },
+      { "id": "TipoDocumental", "group": 2, "level": "Producto", "desc": "Hipotecario, Vehicular, etc." },
+      { "id": "ClaseDocumental", "group": 3, "level": "Agrupador", "desc": "Identificación, Ingresos, etc." },
+      { "id": "Documento", "group": 4, "level": "Requisito", "desc": "Cédula, Certificado, etc." },
+      { "id": "AtributoDocumento", "group": 5, "level": "Metadata", "desc": "Campos específicos del documento" },
+      { "id": "Persona", "group": 6, "level": "Entidad", "desc": "Cliente / Solicitante" },
+      { "id": "Proceso", "group": 7, "level": "Transaccional", "desc": "Instancia de solicitud" },
+      { "id": "EntregaDocumento", "group": 8, "level": "Evidencia", "desc": "Archivo cargado por el cliente" }
+    ],
+    "links": [
+      { "source": "ModeloDocumental", "target": "TipoDocumental", "label": "CONTIENE" },
+      { "source": "TipoDocumental", "target": "ClaseDocumental", "label": "REQUIERE_CLASE" },
+      { "source": "ClaseDocumental", "target": "Documento", "label": "INCLUYE" },
+      { "source": "Documento", "target": "AtributoDocumento", "label": "TIENE_ATRIBUTO" },
+      { "source": "Persona", "target": "Proceso", "label": "REALIZA" },
+      { "source": "Proceso", "target": "TipoDocumental", "label": "ES_DE_TIPO" },
+      { "source": "Proceso", "target": "EntregaDocumento", "label": "ENTREGO" },
+      { "source": "EntregaDocumento", "target": "Documento", "label": "CORRESPONDE_A" }
+    ]
+  };
 
   ngAfterViewInit() {
     setTimeout(() => {
@@ -88,29 +77,29 @@ export class GraphModalComponent implements AfterViewInit, OnDestroy {
     const container = this.graphContainer()?.nativeElement;
     if (!container) return;
 
-    const labelColors: { [key: string]: string } = {
-      'Clases_Documentales': '#4285F4',
-      'Reglas_Documentales': '#EA4335',
-      'Nombres': '#FBBC05',
-      'Persona': '#34A853',
-      'Tipo_documental': '#24C1E0',
-      'Tipo_documento': '#F4B400',
-      'Documento': '#FF6D01',
-      'Numero_Documento': '#009688',
-      'Proceso': '#E91E63'
+    const groupColors: { [key: number]: string } = {
+      1: '#4285F4', // Blue - Raíz
+      2: '#EA4335', // Red - Producto
+      3: '#FBBC05', // Yellow - Agrupador
+      4: '#34A853', // Green - Requisito
+      5: '#8E24AA', // Purple - Metadata
+      6: '#00ACC1', // Cyan - Entidad
+      7: '#F4511E', // Orange - Transaccional
+      8: '#795548'  // Brown - Evidencia
     };
 
-    const nodes = this.graphData[0].nodes.map(n => ({
-      id: n.identity,
-      name: n.properties.name,
-      label: n.labels[0],
-      color: labelColors[n.labels[0]] || '#4285F4'
+    const nodes = this.graphData.nodes.map(n => ({
+      id: n.id,
+      name: n.id,
+      level: n.level,
+      desc: n.desc,
+      color: groupColors[n.group] || '#4285F4'
     }));
 
-    const links = this.graphData[0].relationships.map(r => ({
-      source: r.start,
-      target: r.end,
-      type: r.type
+    const links = this.graphData.links.map(l => ({
+      source: l.source,
+      target: l.target,
+      type: l.label
     }));
 
     const ForceGraphFunc = (ForceGraph as any).default || ForceGraph;
