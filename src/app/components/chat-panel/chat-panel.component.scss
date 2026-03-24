@@ -6,6 +6,34 @@
   height: 100%;
 }
 
+.generated-graph-button {
+  margin: 10px 0 !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  background-color: transparent !important;
+  border: 1px solid #e30518 !important;
+  color: #e30518 !important;
+
+  mat-icon {
+    margin-right: 4px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:hover {
+    background-color: #e30518 !important;
+    color: white !important;
+  }
+}
+
+.graph-button-container {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+}
+
 .generated-image-container {
   max-width: 400px;
 }

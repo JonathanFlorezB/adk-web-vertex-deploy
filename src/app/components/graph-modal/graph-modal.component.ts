@@ -1,5 +1,5 @@
-import { AfterViewInit, Component, ElementRef, inject, OnDestroy, viewChild } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, viewChild, Optional } from '@angular/core';
+import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import ForceGraph from 'force-graph';
@@ -13,10 +13,11 @@ import ForceGraph from 'force-graph';
 })
 export class GraphModalComponent implements AfterViewInit, OnDestroy {
   private readonly dialogRef = inject(MatDialogRef<GraphModalComponent>);
+  public readonly data = inject(MAT_DIALOG_DATA, { optional: true });
   private readonly graphContainer = viewChild<ElementRef>('graphContainer');
   private graphInstance: any;
 
-  private readonly graphData = {
+  private readonly defaultGraphData = {
     "nodes": [
       { "id": "ModeloDocumental", "group": 1, "level": "Raíz", "desc": "Configuración global del banco" },
       { "id": "TipoDocumental", "group": 2, "level": "Producto", "desc": "Hipotecario, Vehicular, etc." },
@@ -38,6 +39,12 @@ export class GraphModalComponent implements AfterViewInit, OnDestroy {
       { "source": "EntregaDocumento", "target": "Documento", "label": "CORRESPONDE_A" }
     ]
   };
+
+  private graphData: any;
+
+  constructor() {
+    this.graphData = this.data?.graphData || this.defaultGraphData;
+  }
 
   ngAfterViewInit() {
     setTimeout(() => {
@@ -88,15 +95,15 @@ export class GraphModalComponent implements AfterViewInit, OnDestroy {
       8: '#795548'  // Brown - Evidencia
     };
 
-    const nodes = this.graphData.nodes.map(n => ({
+    const nodes = this.graphData.nodes.map((n: any) => ({
       id: n.id,
-      name: n.id,
-      level: n.level,
-      desc: n.desc,
+      name: n.label || n.id,
+      level: n.level || n.type,
+      desc: n.desc || '',
       color: groupColors[n.group] || '#4285F4'
     }));
 
-    const links = this.graphData.links.map(l => ({
+    const links = this.graphData.links.map((l: any) => ({
       source: l.source,
       target: l.target,
       type: l.label

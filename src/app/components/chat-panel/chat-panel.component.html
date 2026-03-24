@@ -109,7 +109,15 @@
               </div>
               } @else {
               <ng-container [ngComponentOutlet]="markdownComponent"
-                [ngComponentOutletInputs]="{text: message.text!, thought: message.thought}"></ng-container>
+                [ngComponentOutletInputs]="{text: getCleanedText(message.text!), thought: message.thought}"></ng-container>
+              @if (hasForceGraph(message)) {
+              <div class="graph-button-container">
+                <button mat-stroked-button color="primary" class="generated-graph-button" (click)="openGeneratedGraph(message)">
+                  <mat-icon>hub</mat-icon>
+                  Ver grafo generado
+                </button>
+              </div>
+              }
               }
               }
             </div>

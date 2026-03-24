@@ -265,11 +265,12 @@ export class SidePanelComponent implements AfterViewInit {
 
   openGraphModal() {
     this.dialog.open(GraphModalComponent, {
-      width: '95vw',
-      height: '95vh',
-      maxWidth: '95vw',
+      width: '98vw',
+      height: '98vh',
+      maxWidth: '98vw',
+      maxHeight: '98vh',
       panelClass: 'graph-modal-panel',
-      disableClose: true // Only close via the 'x' button as requested
+      disableClose: true
     });
   }
 }

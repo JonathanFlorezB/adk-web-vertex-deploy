@@ -18,6 +18,7 @@
 import {TextFieldModule} from '@angular/cdk/text-field';
 import {CommonModule, NgClass} from '@angular/common';
 import {AfterViewInit, Component, DestroyRef, effect, ElementRef, EventEmitter, HostListener, inject, input, Input, OnChanges, Output, signal, SimpleChanges, Type, ViewChild} from '@angular/core';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
@@ -51,6 +52,7 @@ import {ComputerActionComponent} from '../computer-action/computer-action.compon
 import {LongRunningResponseComponent} from '../long-running-response/long-running-response';
 import {MARKDOWN_COMPONENT, MarkdownComponentInterface} from '../markdown/markdown.component.interface';
 import {MessageFeedbackComponent} from '../message-feedback/message-feedback.component';
+import {GraphModalComponent} from '../graph-modal/graph-modal.component';
 
 import {ChatPanelMessagesInjectionToken} from './chat-panel.component.i18n';
 
@@ -82,6 +84,7 @@ const ROOT_AGENT = 'root_agent';
     JsonTooltipDirective,
     ComputerActionComponent,
     LongRunningResponseComponent,
+    MatDialogModule,
   ],
 })
 export class ChatPanelComponent implements OnChanges, AfterViewInit {
@@ -165,6 +168,7 @@ export class ChatPanelComponent implements OnChanges, AfterViewInit {
 
   protected readonly onScroll = new Subject<Event>();
   protected readonly sanitizer = inject(SAFE_VALUES_SERVICE);
+  private readonly dialog = inject(MatDialog);
 
   constructor() {
     effect(() => {
@@ -544,5 +548,46 @@ export class ChatPanelComponent implements OnChanges, AfterViewInit {
             {behavior: 'smooth', block: 'nearest', inline: 'nearest'});
       }
     }, 0);
+  }
+
+  hasForceGraph(message: any): boolean {
+    if (!message.text) return false;
+    // Detect JSON structure with nodes and links
+    return /"nodes"\s*:[\s\S]*?"links"\s*:/.test(message.text);
+  }
+
+  getCleanedText(text: string): string {
+    if (!text) return '';
+    // Identify the graph data block (JSON + optional markdown)
+    // Greedy match for the final brace to capture nested structures
+    const graphRegex = /(```json\s*)?({[\s\S]*"nodes"[\s\S]*"links"[\s\S]*})(\s*```)?/;
+    const match = text.match(graphRegex);
+    if (match) {
+      // Remove only the matched graph block
+      return text.replace(match[0], '').trim();
+    }
+    return text;
+  }
+
+  openGeneratedGraph(message: any) {
+    const text = message.text;
+    // Capturing only the JSON part from inside the message
+    // Greedy match for the final brace to include any nested objects
+    const match = text.match(/({[\s\S]*"nodes"[\s\S]*"links"[\s\S]*})/);
+    if (match) {
+      try {
+        const graphJson = match[1];
+        const graphData = JSON.parse(graphJson);
+        this.dialog.open(GraphModalComponent, {
+          width: '98vw',
+          height: '98vh',
+          maxWidth: '98vw',
+          maxHeight: '98vh',
+          data: { graphData }
+        });
+      } catch (e) {
+        console.error('Failed to parse graph JSON', e, match[1]);
+      }
+    }
   }
 }
