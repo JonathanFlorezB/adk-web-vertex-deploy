@@ -170,6 +170,21 @@
   }
 }
 
+.message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 4px;
+}
+
+.bot-message .message-content-wrapper {
+  align-items: flex-start;
+}
+
+.user-message .message-content-wrapper {
+  align-items: flex-end;
+}
+
 .bot-message {
   display: flex;
   flex-wrap: wrap;
