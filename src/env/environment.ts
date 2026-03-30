@@ -16,4 +16,5 @@
 
 export interface Environment {
   apiServerPort: string;
+  signUrlApiUrl: string;
 }

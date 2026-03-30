@@ -18,4 +18,5 @@ import {Environment} from './environment';
 
 export const env: Environment = {
   apiServerPort: '8000',
+  signUrlApiUrl: (window as any).__env?.SIGN_URL_API_URL ?? 'http://localhost:3000',
 };

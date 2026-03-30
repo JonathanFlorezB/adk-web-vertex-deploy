@@ -53,6 +53,7 @@ import {LongRunningResponseComponent} from '../long-running-response/long-runnin
 import {MARKDOWN_COMPONENT, MarkdownComponentInterface} from '../markdown/markdown.component.interface';
 import {MessageFeedbackComponent} from '../message-feedback/message-feedback.component';
 import {GraphModalComponent} from '../graph-modal/graph-modal.component';
+import {PdfModalComponent} from '../pdf-modal/pdf-modal.component';
 
 import {ChatPanelMessagesInjectionToken} from './chat-panel.component.i18n';
 
@@ -558,15 +559,81 @@ export class ChatPanelComponent implements OnChanges, AfterViewInit {
 
   getCleanedText(text: string): string {
     if (!text) return '';
-    // Identify the graph data block (JSON + optional markdown)
-    // Greedy match for the final brace to capture nested structures
+    let cleanedText = text;
     const graphRegex = /(```json\s*)?({[\s\S]*"nodes"[\s\S]*"links"[\s\S]*})(\s*```)?/;
-    const match = text.match(graphRegex);
+    const match = cleanedText.match(graphRegex);
     if (match) {
-      // Remove only the matched graph block
-      return text.replace(match[0], '').trim();
+      cleanedText = cleanedText.replace(match[0], '').trim();
     }
-    return text;
+    return cleanedText;
+  }
+
+  getMessageChunks(message: any): { id: string; type: 'text' | 'pdf'; content?: string; url?: string; filename?: string }[] {
+    if (!message.text) return [];
+    
+    // Use the existing cleaned text as the base
+    let baseText = this.getCleanedText(message.text);
+    
+    // Memoization to avoid infinite re-renders during change detection
+    if (message._lastTextForChunks === baseText) {
+      return message._chunks || [];
+    }
+    message._lastTextForChunks = baseText;
+    
+    const chunks: { id: string; type: 'text' | 'pdf'; content?: string; url?: string; filename?: string }[] = [];
+    
+    // Regex for grabbing https://storage.googleapis.com and https://storage.cloud.google.com URLs
+    const pdfRegex = /https:\/\/storage(?:\.googleapis\.com|\.cloud\.google\.com)\/[^\s)\]"`]+/g;
+    
+    let lastIndex = 0;
+    let match;
+    let i = 0;
+    
+    while ((match = pdfRegex.exec(baseText)) !== null) {
+      // Add preceding text chunk if there is any
+      if (match.index > lastIndex) {
+        chunks.push({
+          id: `text-${i++}`,
+          type: 'text',
+          content: baseText.substring(lastIndex, match.index)
+        });
+      }
+      
+      const url = match[0];
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1] || 'Documento';
+      
+      chunks.push({
+        id: `pdf-${i++}`,
+        type: 'pdf',
+        url: url,
+        filename: filename
+      });
+      
+      lastIndex = pdfRegex.lastIndex;
+    }
+    
+    // Add remaining text
+    if (lastIndex < baseText.length) {
+      chunks.push({
+        id: `text-${i++}`,
+        type: 'text',
+        content: baseText.substring(lastIndex)
+      });
+    }
+    
+    message._chunks = chunks;
+    return chunks;
+  }
+
+  openPdfModalWithUrl(url: string) {
+    this.dialog.open(PdfModalComponent, {
+      width: '98vw',
+      height: '98vh',
+      maxWidth: '98vw',
+      maxHeight: '98vh',
+      data: { url }
+    });
   }
 
   openGeneratedGraph(message: any) {

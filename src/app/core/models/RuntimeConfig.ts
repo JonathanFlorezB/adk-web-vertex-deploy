@@ -21,6 +21,7 @@
  */
 export declare interface RuntimeConfig {
   backendUrl: string;
+  signUrlApiUrl: string;
   logo?: LogoConfig;
 }
 

@@ -1,0 +1,25 @@
+<div class="pdf-modal-container">
+  <div class="modal-header">
+    <h2>Visor de PDF</h2>
+    <button mat-icon-button (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  
+  <div class="modal-content">
+    <mat-spinner *ngIf="loading"></mat-spinner>
+    
+    <div *ngIf="error" class="error-message">
+      <mat-icon color="warn">error</mat-icon>
+      <p>Ocurrió un error al cargar el PDF. Verifica los permisos de acceso y el archivo.</p>
+    </div>
+
+    <embed 
+      *ngIf="pdfUrl && !loading && !error" 
+      [src]="pdfUrl" 
+      type="application/pdf" 
+      width="100%" 
+      height="100%" 
+    />
+  </div>
+</div>

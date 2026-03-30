@@ -38,3 +38,9 @@ adk-samples/
 
 venv/
 src/assets/config/vertex-config.json
+src/assets/config/runtime-config.json
+
+# Environment variables
+.env
+.env.*
+!.env.example

@@ -161,8 +161,21 @@
                   </div>
                 </div>
                 } @else {
-                <ng-container [ngComponentOutlet]="markdownComponent"
-                  [ngComponentOutletInputs]="{text: getCleanedText(message.text!), thought: message.thought}"></ng-container>
+                <div class="message-chunks-container">
+                  @for (chunk of getMessageChunks(message); track chunk.id) {
+                    @if (chunk.type === 'text') {
+                      <ng-container [ngComponentOutlet]="markdownComponent"
+                        [ngComponentOutletInputs]="{text: chunk.content, thought: message.thought}"></ng-container>
+                    } @else if (chunk.type === 'pdf') {
+                      <div class="inline-pdf-button-wrapper" style="display: block; margin: 4px 0 12px 0;">
+                        <button mat-stroked-button color="primary" class="generated-pdf-button" (click)="openPdfModalWithUrl(chunk.url!)">
+                          <mat-icon>picture_as_pdf</mat-icon>
+                          Abrir PDF
+                        </button>
+                      </div>
+                    }
+                  }
+                </div>
                 @if (hasForceGraph(message)) {
                 <div class="graph-button-container">
                   <button mat-stroked-button color="primary" class="generated-graph-button" (click)="openGeneratedGraph(message)">

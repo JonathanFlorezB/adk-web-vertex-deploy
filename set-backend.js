@@ -16,20 +16,43 @@
  */
 
 const fs = require('fs');
-const path = './src/assets/config/runtime-config.json';
+const configPath = './src/assets/config/runtime-config.json';
+const envPath = './.env';
+if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8');
+    envFile.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+            process.env[key.trim()] = valueParts.join('=').trim();
+        }
+    });
+}
 
-const backendUrl = process.env.npm_config_backend;
+const args = process.argv.slice(2).reduce((acc, arg) => {
+    if (arg.startsWith('--')) {
+        const [key, value] = arg.substring(2).split('=');
+        acc[key] = value;
+    }
+    return acc;
+}, {});
+
+const backendUrl = args.backend || process.env.npm_config_backend;
+const signUrlApiUrl = args['sign-url-backend'] || process.env.npm_config_sign_url_backend || process.env.SIGN_URL_API_URL || 'http://localhost:3000';
 
 if (!backendUrl) {
     console.error('Missing --backend argument');
-    console.error('Usage: npm run serve --backend=http://127.0.0.1:8000');
+    console.error('Usage: node set-backend.js --backend=http://127.0.0.1:8000 --sign-url-backend=http://localhost:3000');
     process.exit(1);
 }
 
 const config = {
-    backendUrl
+    backendUrl,
+    signUrlApiUrl
 };
 
-fs.writeFileSync(path, JSON.stringify(config, null, 2));
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
 console.log(`Backend URL injected: ${backendUrl}`);
+console.log(`Sign URL API injected: ${signUrlApiUrl}`);

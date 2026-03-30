@@ -40,6 +40,10 @@ export class URLUtil {
     return (window as any)['runtimeConfig']?.backendUrl || '';
   }
 
+  static getSignUrlApiBaseUrl(): string {
+    return (window as any)['runtimeConfig']?.signUrlApiUrl || 'http://localhost:3000';
+  }
+
   static getWSServerUrl(): string {
     let url = URLUtil.getApiServerBaseUrl();
     // For adk web, when the api server is not set, use the current host
